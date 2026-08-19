@@ -1,0 +1,14 @@
+SigninLogs
+| where TimeGenerated > ago(24h)
+| extend DeviceId = tostring(DeviceDetail.deviceId)
+| extend IsManaged = tostring(DeviceDetail.isManaged)
+| extend OS = tostring(DeviceDetail.operatingSystem)
+| extend TrustType = tostring(DeviceDetail.trustType) // Checks if it's Workplace Joined or Azure AD Joined
+| summarize 
+    IPCount = dcount(IPAddress), 
+    DeviceCount = dcount(DeviceId), 
+    IPs = make_set(IPAddress), 
+    Devices = make_set(OS) 
+    by UserPrincipalName, IsManaged, TrustType
+| where IPCount > 1 and IsManaged == "false" 
+// Logic: If they have multiple IPs and the device is UNMANAGED, we have a critical incident.
