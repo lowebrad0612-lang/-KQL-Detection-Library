@@ -1,0 +1,16 @@
+// Detection: Impossible Travel
+// Logic: Identify users signing in from two different locations at a speed that is physically impossible.
+SigninLogs
+| where TimeGenerated > ago(24h)
+| where ResultType == 0
+| extend City = tostring(LocationDetails.city), Country = tostring(LocationDetails.countryOrRegion)
+| project TimeGenerated, UserPrincipalName, City, Country, IPAddress
+| sort by UserPrincipalName asc, TimeGenerated asc
+| serialize
+| extend PrevSessionTime = prev(TimeGenerated), PrevCity = prev(City), PrevCountry = prev(Country), PrevIP = prev(IPAddress)
+| where UserPrincipalName == prev(UserPrincipalName)
+| extend TimeDiffMinutes = datetime_diff('minute', TimeGenerated, PrevSessionTime)
+| where City != PrevCity and TimeDiffMinutes > 0
+// A simple logic gate: if cities are different and time is less than 60 minutes, it's a high-probability alert.
+| where TimeDiffMinutes < 60 
+| project TimeGenerated, UserPrincipalName, CurrentLocation = City, PreviousLocation = PrevCity, TimeDiffMinutes, IPAddress, PrevIP
