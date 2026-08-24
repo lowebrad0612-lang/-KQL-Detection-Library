@@ -1,0 +1,8 @@
+// Detection: Potential Data Exfiltration (Mass Download)
+// Logic: Identify a user downloading an unusually high volume of files in a short window.
+OfficeActivity
+| where TimeGenerated > ago(24h)
+| where Operation == "FileDownloaded"
+| summarize DownloadCount = count() by UserPrincipalName, bin(TimeGenerated, 30m), OfficeWorkload, ClientIP
+| where DownloadCount > 50 // Threshold: More than 50 files in 30 minutes
+| sort by DownloadCount desc
