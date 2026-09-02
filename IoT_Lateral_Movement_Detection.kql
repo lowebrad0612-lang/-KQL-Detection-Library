@@ -1,0 +1,13 @@
+// Detection: IoT Device Anomalous Scanning / Lateral Movement
+// Logic: Identify non-standard devices (IoT) connecting to multiple internal IPs over sensitive ports.
+DeviceNetworkEvents
+| where TimeGenerated > ago(24h)
+| where RemotePort in (22, 445, 3389, 5985) // SSH, SMB, RDP, WinRM
+| summarize 
+    UniqueDestinations = dcount(RemoteIP), 
+    DestinationList = make_set(RemoteIP),
+    Protocols = make_set(RemotePort) 
+    by DeviceName, LocalIP, DeviceType
+| where UniqueDestinations > 5 
+// Judgment: A printer might talk to a print server, but it shouldn't talk to 5+ different internal IPs on port 445.
+| where DeviceType !in ("Workstation", "Server") 
